@@ -1,151 +1,216 @@
-[Instagram Scraper](https://apify.com/sovereigntaylor/instagram-scraper?fpr=data)
+[Instagram Scraper](https://apify.com/aimscrape/instagram-scraper?fpr=data)
 
-Extract data from public Instagram profiles, posts, and hashtags at scale. Scrape follower counts, bios, engagement metrics, captions, likes, comments, media URLs, and more. Built for influencer marketing, brand monitoring, competitor analysis, and social listening.
+# Instagram Scraper: Profiles, Reels, Tagged, Audio, Locations, Hashtags
 
-## What It Does
+This Actor collects **public Instagram posts and reels** from multiple discovery surfaces, including profiles, reels tabs, tagged tabs, audio/music pages, locations, hashtags, and direct post/reel URLs. No login is required.
 
-- **Profile scraping** — Enter usernames and get full profile data including follower counts, bio, post count, verified status, and profile picture
-- **Post extraction** — Scrape recent posts with captions, like counts, comment counts, media URLs, timestamps, and video view counts
-- **Hashtag exploration** — Discover trending posts under any hashtag for social listening and trend tracking
-- **Comment collection** — Optionally scrape comments on posts for sentiment analysis and engagement research
-- **Session cookie support** — Provide your Instagram session cookie for higher rate limits and access to more data
+It is optimized for fast, post-level output: list pages are used to discover shortcodes, then each discovered item is normalized into one dataset record.
 
-## Input Parameters
+## What you get
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `usernames` | array | `["natgeo"]` | Instagram usernames to scrape (without the @ symbol) |
-| `hashtags` | array | `["technology"]` | Hashtags to explore (without the # symbol) |
-| `maxPosts` | integer | `10` | Maximum number of posts to extract per profile or hashtag (max 1,000) |
-| `includeComments` | boolean | `false` | Also scrape comments on each post |
-| `sessionCookie` | string | — | Your Instagram `sessionid` cookie for authenticated access (optional but recommended) |
-| `maxConcurrency` | integer | `1` | Number of parallel requests (keep at 1 for Instagram) |
-| `proxyConfiguration` | object | `{"useApifyProxy": true}` | Proxy settings — **residential proxies strongly recommended** |
+Each dataset item is one Instagram post/reel record with `url` and related metadata.
 
-## Output Example
+Supported discovery inputs:
 
-Profile data:
+- Profiles: `username` or `https://www.instagram.com/{username}/`
+- Reels tab: `https://www.instagram.com/{username}/reels/`
+- Tagged tab: `https://www.instagram.com/{username}/tagged/`
+- Audio/Music: `https://www.instagram.com/reels/audio/{audio_id}/`
+- Locations: `https://www.instagram.com/explore/locations/{location_id}/...`
+- Hashtags: `https://www.instagram.com/popular/{hashtag}/`
+- Direct links: `https://www.instagram.com/p/{shortcode}/` or `https://www.instagram.com/reel/{shortcode}/`
+
+Common output fields:
+
+- `id`, `pk`, `shortcode`, `url`, `from_url`: identifiers and source context
+- `is_video`, `image`, `video_url`, `has_audio`, `video_duration`: media type and media URLs
+- `caption`, `accessibility_caption`, `hashtags`, `mentions`, `tagged_user`: text and entity extraction
+- `comment_count`, `like_count`, `play_count`, `view_count`: engagement metrics (nullable)
+- `comments`: optional top-level comment previews (only when included in post detail responses)
+- `owner`, `coauthor_producers`: author/co-author objects (when available)
+- `location`, `product_type`, `clips_music_attribution_info`: post metadata
+- `taken_at`, `crawled_at`: content timestamp (UTC ISO) and scrape timestamp (ISO)
+
+Notes about `comments`:
+
+- `comments` is a **preview list**, not a full comments scraper (no pagination).
+- Only **top-level** comments are included (replies are not included).
+- The field may be **omitted** on some items; restricted/fallback items may include `comments: null`.
+
+Notes about `url`:
+
+- `url` is the preferred canonical post link.
+
+## Other Scrapers
+
+If you also collect YouTube data, these Actors are a good match:
+
+| Scraper | Best for | Output highlights |
+| --- | --- | --- |
+| [Fast YouTube Channel Video Scraper](https://apify.com/aimscrape/youtube-channel-video-scraper) | Collecting videos from a specific channel's `/videos` page | Video URL/ID, title, thumbnail, views text, publish date |
+| [YouTube Advanced Search Scraper](https://apify.com/aimscrape/youtube-search-video-scraper) | Collecting videos from keyword-based YouTube search results | Normalized video list with duration and channel metadata |
+
+## How to run it in the Apify Console
+
+1. Open the Actor page and click **Try for free / Run**.
+2. In **Input**, paste one or more Instagram queries (username/profile/reels/tagged/post/reel/audio URLs).
+3. Optionally set the maximum number of posts to collect per query in **Input** (see schema).
+A query is one input line, such as a username, profile tab URL (reels/tagged), audio URL, hashtag URL, location URL, or a direct post/reel URL.
+4. After the run finishes, open the **Dataset** to view results and export to JSON / CSV / Excel.
+
+## Input
+
+### `queries` (required)
+
+Example:
+
+```
+username
+https://www.instagram.com/p/{shortcode}/
+https://www.instagram.com/reel/{shortcode}/
+https://www.instagram.com/google
+https://www.instagram.com/google/reels/
+https://www.instagram.com/google/tagged/
+https://www.instagram.com/reels/audio/502550169096496/
+https://www.instagram.com/explore/locations/215631076/williamsburg/
+https://www.instagram.com/explore/locations/215631076/williamsburg/recent/
+https://www.instagram.com/popular/furniture/
+```
+
+Notes:
+
+- Empty/blank entries are ignored and inputs are de‑duplicated
+- Unsupported/invalid usernames or URLs are skipped and reported in logs (no charge; they do not automatically fail the whole run)
+- `location` only support top and recent（recent max results 18; top varies by location/time and IG behavior）
+
+### Example input
 
 ```
 {
-  "type": "profile",
-  "username": "natgeo",
-  "fullName": "National Geographic",
-  "bio": "Experience the world through the eyes of National Geographic photographers.",
-  "followerCount": 284000000,
-  "followingCount": 156,
-  "postCount": 32847,
-  "isVerified": true,
-  "isPrivate": false,
-  "profilePicUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/abc123_150x150.jpg",
-  "externalUrl": "https://www.nationalgeographic.com",
-  "dataSource": "json_ld",
-  "scrapedAt": "2026-03-03T10:12:05.789Z",
-  "url": "https://www.instagram.com/natgeo/"
+  "queries": ["youtube", "https://www.instagram.com/google"]
 }
 ```
 
-Post data:
+Example output (truncated):
 
 ```
 {
-  "type": "post",
-  "ownerUsername": "natgeo",
-  "shortcode": "C4xR2bNJqMk",
-  "caption": "Photo by @paulnicklen | A curious emperor penguin chick approaches the camera on the sea ice of Antarctica. These remarkable birds endure the harshest conditions on Earth.",
-  "likesCount": 1245000,
-  "commentsCount": 4832,
-  "timestamp": "2026-02-28T15:30:00.000Z",
-  "imageUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-15/abc123_1080x1080.jpg",
-  "videoUrl": null,
-  "isVideo": false,
-  "videoViewCount": null,
-  "location": "Antarctica",
-  "postUrl": "https://www.instagram.com/p/C4xR2bNJqMk/"
+  "id": "3849765618028134045",
+  "pk": "3849765618028134045",
+  "is_video": true,
+  "video_url": "https://instagram.fhkg4-2.fna.fbcdn...=69B586DC",
+  "has_audio": true,
+  "video_duration": 93.013,
+  "accessibility_caption": null,
+  "hashtags": [],
+  "mentions": [],
+  "tagged_user": [
+    {
+      "full_name": "Google",
+      "followed_by_viewer": false,
+      "id": "1067259270",
+      "is_verified": true,
+      "profile_pic_url": "https://instagram.fhkg4-2.fna...=d885a2",
+      "username": "google"
+    }
+  ],
+  "caption": "Want to know how the pros use AI? 💡 Google Docs Product Manager Frank Tisellano takes us through the new Gemini features launching today that help you draft, polish, and align your writing effortlessly. ✍️✨",
+  "comment_count": 46,
+  "comments": [
+    {
+      "id": "17982927302966768",
+      "text": "Nice post!",
+      "created_at": 1772855351,
+      "did_report_as_spam": false,
+      "owner": {
+        "id": "66485496816",
+        "is_verified": false,
+        "profile_pic_url": "https://example.com/profile.jpg",
+        "username": "some_user"
+      },
+      "viewer_has_liked": false,
+      "like_count": 0,
+      "is_restricted_pending": false
+    }
+  ],
+  "like_count": 943,
+  "play_count": 892753,
+  "view_count": 27179,
+  "taken_at": "2026-03-10T13:10:16Z",
+  "is_ad": false,
+  "is_affiliate": false,
+  "is_paid_partnership": false,
+  "is_published": true,
+  "location": null,
+  "from_url": "https://www.instagram.com/google/",
+  "url": "https://www.instagram.com/reel/DVtHW7DFD6d/",
+  "crawled_at": "2026-03-13T05:50:18.141550Z",
+  "image": "https://instagram.fhkg..._nc_sid=d885a2",
+  "shortcode": "DVtHW7DFD6d",
+  "product_type": "clips",
+  "clips_music_attribution_info": {
+    "artist_name": "googleworkspace",
+    "song_name": "Original audio",
+    "uses_original_audio": true,
+    "should_mute_audio": false,
+    "should_mute_audio_reason": "",
+    "audio_id": "26560146256910882"
+  },
+  "owner": {
+    "id": "46028029670",
+    "username": "googleworkspace",
+    "is_verified": true,
+    "profile_pic_url": "https://instagram.fhk...id=d885a2",
+    "blocked_by_viewer": false,
+    "restricted_by_viewer": null,
+    "followed_by_viewer": false,
+    "full_name": "Google Workspace",
+    "has_blocked_viewer": false,
+    "is_embeds_disabled": false,
+    "is_private": false,
+    "is_unpublished": false,
+    "requested_by_viewer": false,
+    "pass_tiering_recommendation": true,
+    "post_count": 1554,
+    "followers": 586669
+  },
+  "coauthor_producers": [
+    {
+      "id": "1067259270",
+      "is_verified": true,
+      "profile_pic_url": "https://instagra...c_sid=d885a2",
+      "username": "google"
+    }
+  ]
 }
 ```
 
-## Use Cases
+## FAQ
 
-- **Influencer marketing** — Analyze creator profiles, follower counts, and engagement rates before sponsorship deals
-- **Brand monitoring** — Track mentions of your brand across hashtags and competitor accounts
-- **Competitor analysis** — Compare posting frequency, engagement metrics, and content strategy across competitor profiles
-- **Social listening** — Monitor hashtag trends and post volume for market sentiment and trending topics
-- **Content research** — Discover top-performing posts in any niche for inspiration and content planning
-- **Lead generation** — Find potential brand ambassadors by scraping profiles in your industry vertical
+### 1) Why is the Dataset empty / much smaller than expected?
 
-## API Usage
+Common reasons:
 
-### JavaScript
+- The query is invalid/unsupported and was skipped (check run logs)
+- The source has fewer public posts/reels than requested
+- The profile is private or restricted for anonymous (no-login) access
+- Instagram is temporarily limiting anonymous requests on that source
 
-```
-import { ApifyClient } from 'apify-client';
+### 2) What does `Restricted profile` mean?
 
-const client = new ApifyClient({ token: 'YOUR_API_TOKEN' });
-const run = await client.actor('sovereigntaylor/instagram-scraper').call({
-    usernames: ['natgeo', 'nasa'],
-    maxPosts: 50,
-    includeComments: false,
-});
-const { items } = await client.dataset(run.defaultDatasetId).listItems();
-console.log(items);
-```
+A profile can be public but still limit anonymous access.
+Instagram may gate some endpoints unless a logged-in session is used.
+When this happens, the Actor logs the restriction and skips or stops that profile source.
 
-### Python
+### 3) Why are some fields `null`?
 
-```
-from apify_client import ApifyClient
+Some values are not consistently exposed by Instagram for every post or source.
+Fields such as `video_duration`, `play_count`, `view_count`, `location`, or music metadata may be `null`.
+This is expected behavior for public, no-login scraping.
 
-client = ApifyClient('YOUR_API_TOKEN')
-run = client.actor('sovereigntaylor/instagram-scraper').call(run_input={
-    'usernames': ['natgeo', 'nasa'],
-    'maxPosts': 50,
-    'includeComments': False,
-})
-items = client.dataset(run['defaultDatasetId']).list_items().items
-print(items)
-```
+## Limitations & recommendations
 
-### cURL
-
-```
-curl "https://api.apify.com/v2/acts/sovereigntaylor~instagram-scraper/runs" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  -d '{
-    "usernames": ["natgeo", "nasa"],
-    "maxPosts": 50,
-    "includeComments": false
-  }'
-```
-
-## Pricing
-
-This actor uses pay-per-event pricing — you only pay for data successfully scraped.
-
-| Event | Price |
-| --- | --- |
-| Profile scraped | $0.005 |
-| Post scraped | $0.002 |
-| Hashtag page scraped | $0.003 |
-
-**Example:** Scraping 5 profiles + 250 posts = (5 x $0.005) + (250 x $0.002) = **$0.525**
-
-## Limitations
-
-- **Instagram is one of the hardest platforms to scrape** — residential proxies are essential for reliable results
-- Private accounts cannot be scraped
-- Without a session cookie, data is limited to what Instagram shows to logged-out visitors (profile info + recent posts only)
-- Instagram rate-limits aggressively — keep `maxConcurrency` at 1 and expect slower scraping compared to other platforms
-- Like and comment counts on very popular posts may be approximate (Instagram rounds large numbers)
-- Stories, Reels metadata, and DM data cannot be scraped
-- Hashtag scraping returns the "top posts" selection, not a complete chronological feed
-- Maximum 1,000 posts per profile or hashtag per run
-
-## Related Actors
-
-- [Twitter/X Followers Scraper](https://apify.com/sovereigntaylor/twitter-followers-scraper) — Scrape follower lists and profile data from X/Twitter
-- [YouTube Scraper](https://apify.com/sovereigntaylor/youtube-scraper) — Extract YouTube videos and channel metadata
-- [Reddit Scraper](https://apify.com/sovereigntaylor/reddit-scraper) — Scrape Reddit posts and comments from any subreddit
-- [TripAdvisor Scraper](https://apify.com/sovereigntaylor/tripadvisor-scraper) — Extract reviews and ratings from TripAdvisor
+- **Data scope**: this Actor returns post/reel items (not full profile documents).
+- **Access limits**: some sources and fields are unavailable or unstable for anonymous (no-login) access, even on public accounts/pages.
+- **Dynamic surfaces**: location/hashtag/reels/tagged pages are dynamic, so results can vary over time for the same query.
+- **Compliance**: make sure your usage complies with Instagram's terms and local laws, and only collect data you have the right to use.
